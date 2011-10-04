@@ -1,0 +1,10 @@
+name: mdp
+summary: "TODO: Summary"
+description: "TODO: Description"
+license: MIT
+authors: pts
+homepage: http://rubygems.org/gems/mdp
+
+development_dependencies:
+  yard: ~> 0.7
+  bundler: ~> 1.0.0
