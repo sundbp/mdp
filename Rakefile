@@ -33,3 +33,9 @@ require 'yard'
 YARD::Rake::YardocTask.new  
 task :doc => :yard
 
+desc "Run specs with rcov"
+RSpec::Core::RakeTask.new("spec:rcov") do |t|
+  t.rcov = true
+  t.rcov_opts = %w{--exclude "spec\/,jsignal_internal"}
+  t.rspec_opts = ["--format documentation", "--format RspecJunitFormatter", "--out reports/rspec.xml"]
+end
