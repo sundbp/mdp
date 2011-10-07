@@ -4,7 +4,7 @@ require 'mdp'
 
 module MDP
   class WorkerSession
-  
+    
     attr_reader :service_name
     
     DEFAULTS = {
@@ -20,15 +20,19 @@ module MDP
       @service_name = service_name
       @broker_endpoint = broker_endpoint
       @options = DEFAULTS.merge(options)
-      @context = ZMQ::Context.new(1)
+      @context = ZMQ::Context.create(1)
+      raise MDPError.new("Failed to create ZeroMQ context!") if @context.nil?
       connect_to_broker()
     end
   
     def connect_to_broker
       @worker.close unless @worker.nil?
       @worker = @context.socket(ZMQ::DEALER)
-      @worker.setsockopt(ZMQ::LINGER, 0)
-      @worker.connect(@broker_endpoint)
+      raise MDPError.new("Failed to create ZeroMQ socket!") if @worker.nil?
+      rc = @worker.setsockopt(ZMQ::LINGER, 0)
+      raise MDPError.new("Failed to set socket options!") unless ZMQ::Util.resultcode_ok?(rc)
+      rc = @worker.connect(@broker_endpoint)
+      raise MDPError.new("Failed to connect socket!") unless ZMQ::Util.resultcode_ok?(rc)
       send_ready
       @liveness = @options[:heartbeat_liveness]
       @next_heartbeat = next_heartbeat
@@ -52,15 +56,14 @@ module MDP
       msg.push command
       msg.push MDP::MDPW_WORKER
       msg.push ""
+      raise MDPError.new("Trying to send msg on socket that isn't open!") if @worker.nil?
       rc = @worker.send_strings(msg)
-      if rc == -1
-        log "Failed to send message to broker! errno = #{ZMQ::Util.errno}"
-      end
+      raise MDPError.new("Failed to send msg!") unless ZMQ::Util.resultcode_ok?(rc)
       rc
     end
     
     def next_heartbeat
-      Time.now + @options[:heartbeat_interval].to_f / 1000.0
+      Time.now + heartbeat_interval.to_f / 1000.0
     end
   
     def heartbeat_interval
@@ -89,11 +92,11 @@ module MDP
           when ZMQ::EINTR
             log "Interrupted while in poll. Shutting down.."
           when ZMQ::EFAULT
-            log "Invalid poll items! Shutting down.."
+            raise MDPError.new("Invalid poll items!")
           when ZMQ::ETERM
-            log "A socket with terminated context detected! Shutting down.."
+            raise MDPError.new("A socket with terminated context detected!")
           else
-            log "zmq_poll() failed for unknown reason! Shutting down.."
+            raise MDPError.new("zmq_poll() failed for unknown reason!")
           end
           return nil
         end
@@ -123,7 +126,7 @@ module MDP
           
           # is this a valid message? if not just skip it
           if header != MDP::MDPW_WORKER
-            log "Received an invalid message - header not valid: #{header.copy_out_string}\n#{msg}"
+            log "Received an invalid message - header not valid: #{header}\n#{msg}"
             next
           end        
           
@@ -141,10 +144,8 @@ module MDP
             reconnect(poller)
             
           else
-            log "Invalid input message received: #{command.copy_out_string}\n#{msg}"
-          end
-          
-          # close the inputs
+            log "Invalid input message received: #{command}\n#{msg}"
+          end          
         
         elsif results == 0
           @liveness -= 1
@@ -155,8 +156,7 @@ module MDP
           end
           
         elsif results > 1
-          log "Somehow got more than 1 result from poll when listening to 1 socket - bailing!"
-          return nil
+          raise MDPError.new("Somehow got more than 1 result from poll when listening to 1 socket - bailing!")
         end
         
         process_heartbeat()
@@ -187,7 +187,7 @@ module MDP
     
     def shutdown
       @worker.close unless @worker.nil?
-      @context.terminate
+      @context.terminate unless @context.nil?
     end
   end
 end
