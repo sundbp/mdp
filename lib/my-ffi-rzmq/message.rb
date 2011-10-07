@@ -30,5 +30,11 @@ module ZMQ
       copy_out_string
     end
     
+    # Convenience method to check if a message is of size 0.
+    #
+    def empty?
+      size == 0
+    end
+    
   end # class Message
 end # module ZMQ

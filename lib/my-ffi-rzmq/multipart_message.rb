@@ -18,7 +18,8 @@ module ZMQ
   # The methods to override are: #push(frame), #unwrap, #duplicate
   #
   class MultipartMessage
-
+    include Enumerable
+    
     # Create a multipart message.
     #
     # Can provide an array of message frames to initialize the message with.
@@ -26,14 +27,6 @@ module ZMQ
     def initialize(msg_frames = [])
       @msg_frames = msg_frames
     end
-
-    # Add a frame to the message (positioning it at the end of message).
-    #
-    def add(frame)
-      @msg_frames << frame
-      self
-    end
-    alias_method :<<, :add
 
     # Remove the first frame of the message and return it.
     #
@@ -99,12 +92,24 @@ module ZMQ
       result
     end
 
+    # Add a frame to the message (positioning it at the end of message).
+    #
+    def add(frame)
+      raise RuntimeError.new("#add on base class not implemented, need to implement in child classes!")
+    end
+
+    # Redirect << operator to #add method
+    #
+    def <<(frame)
+      add(frame)
+    end
+
     # Add a frame ot the front of the message.
     #
     # Not implemented in the base class.
     #
     def push(frame)
-      raise ZMQ::MessageError.new("#push on base class not implemented, need to implement in child classes!")
+      raise RuntimeError.new("#push on base class not implemented, need to implement in child classes!")
     end
     
     # Unwrap the address of a message.
@@ -112,7 +117,7 @@ module ZMQ
     # Not implemented in the base class.
     #    
     def unwrap
-      raise ZMQ::MessageError.new("#unwrap on base class not implemented, need to implement in child classes!")
+      raise RuntimeError.new("#unwrap on base class not implemented, need to implement in child classes!")
     end
   
     # Create a duplicate of the message.
@@ -120,7 +125,7 @@ module ZMQ
     # Not implemented in the base class.
     #
     def duplicate
-      raise ZMQ::MessageError.new("#duplicate on base class not implemented, need to implement in child classes!")
+      raise RuntimeError.new("#duplicate on base class not implemented, need to implement in child classes!")
     end
   
   end # class MultipartMessage

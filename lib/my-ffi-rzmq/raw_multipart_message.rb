@@ -20,21 +20,26 @@ module ZMQ
       super
     end
 
+    # Add a frame to the message (positioning it at the end of message).
+    #
+    # Any string automatically gets wrapped in a ZMQ::Message, ZMQ::Messages
+    # are added directly.
+    #
+    def add(frame)
+      msg_frame = convert_frame(frame)
+      @msg_frames << msg_frame
+      self
+    end
+    
     # Add a frame to the front of the message.
     # 
     # Frame can be either a string or a ZMQ::Message. The method
     # wraps any string given in a ZMQ::Message for the user.
     #
     def push(frame)
-      msg_frame = case frame
-      when String
-        ZMQ::Message.new(frame)
-      when ZMQ::Message
-        frame
-      else
-        raise ZMQ::MessageError.new("Tried to push a message from of unknown type: #{frame.class}")
-      end
+      msg_frame = convert_frame(frame)
       @msg_frames.unshift(msg_frame)
+      self
     end
   
     # Remove the address from the front of a message.
@@ -43,7 +48,7 @@ module ZMQ
     #
     def unwrap
       frame = pop
-      if @msg_frames.first.size == 0
+      if @msg_frames.first.empty?
         empty = pop
         empty.close
       end
@@ -64,6 +69,19 @@ module ZMQ
     #
     def close
       @msg_frames.each {|frame| frame.close}
+    end
+    
+    ############################ PRIVATE METHODS ########################
+    
+    def convert_frame(frame)
+      case frame
+      when String
+        ZMQ::Message.new(frame)
+      when ZMQ::Message
+        frame
+      else
+        raise ArgumentError.new("Tried to push a of unknown type: #{frame.class}")
+      end
     end
     
   end # class MultipartRawMessage

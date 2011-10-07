@@ -12,7 +12,19 @@ module ZMQ
     def initialize(msg_frames = [])
       super
     end
-    
+
+    # Add a frame to the message (positioning it at the end of message).
+    #
+    # Any ZMQ::Message automatically gets copied out to a ruby string
+    # (user still responsible for original ZMQ::Message), strings are
+    # added directly.
+    #
+    def add(frame)
+      msg_frame = convert_frame(frame)
+      @msg_frames << msg_frame
+      self
+    end
+
     # Add a frame to the front of the message.
     # 
     # Frame can be either a string or a ZMQ::Message. The method
@@ -20,15 +32,9 @@ module ZMQ
     # is still in charge of properly closing such a message).
     #
     def push(frame)
-      msg_frame = case frame
-      when String
-        frame
-      when ZMQ::Message
-        frame.copy_out_string
-      else
-        raise ZMQ::MessageError.new("Tried to push a message from of unknown type: #{frame.class}")
-      end
+      msg_frame = convert_frame(frame)
       @msg_frames.unshift(msg_frame)
+      self
     end
     
     # Remove the address from the front of a message.
@@ -48,6 +54,19 @@ module ZMQ
     def duplicate
       dup_frames = @msg_frames.map {|frame| frame.dup}
       ZMQ::StringMultipartMessage.new(dup_frames)
+    end
+
+    ############################ PRIVATE METHODS #######################
+    
+    def convert_frame(frame)
+      case frame
+      when String
+        frame
+      when ZMQ::Message
+        frame.copy_out_string
+      else
+        raise ArgumentError.new("Tried to push a message from of unknown type: #{frame.class}")
+      end
     end
     
   end # class StringMultipartMessage
