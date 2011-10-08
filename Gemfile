@@ -1,3 +1,5 @@
+require 'rbconfig'
+
 source :rubygems
 
 gemspec
@@ -18,8 +20,16 @@ group :development do
   gem 'fuubar',       '~> 0.0.6'
   gem 'guard',        '~> 0.3.0'
   gem 'guard-rspec',  '~> 0.2.0'
-  gem 'rb-notifu'
-  gem 'rb-fchange'  
+  
+  if RbConfig::CONFIG['host_os'] == 'windows'
+    gem 'rb-notifu'
+    gem 'rb-fchange'
+  end
+  
+  if RbConfig::CONFIG['host_os'] == 'darwin'
+    gem 'rb-fsevent'
+    gem 'growl'
+  end
 end
 
 group :test do

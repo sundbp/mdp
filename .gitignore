@@ -3,3 +3,6 @@ pkg/
 Gemfile.lock
 vendor/cache/*.gem
 ._redcar/
+bin/
+.redcar/
+.bundle/

@@ -1,10 +1,15 @@
 require 'mdp/version'
+require 'mdp/exceptions'
 
 require 'mdp/broker'
 require 'mdp/worker_session'
 require 'mdp/client_session'
 require 'mdp/async_client_session'
 
+# MajorDomoProtocol module
+#
+# Contains all the classes used to participate in a majordomo
+# service oriented system.
 module MDP
   MDPC_CLIENT = "MDPC01"
   MDPW_WORKER = "MDPW01"
