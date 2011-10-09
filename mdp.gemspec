@@ -26,7 +26,7 @@ Gem::Specification.new do |gemspec|
 
   version = {
     :file => 'mdp/version',
-    :constant => 'Mdp::VERSION'
+    :constant => 'MDP::VERSION'
   }
 
   defaults = {

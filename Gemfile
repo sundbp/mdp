@@ -8,7 +8,7 @@ gem 'ffi-rzmq', '~> 0.9.0'
 #gem 'ffi-rzmq', :git => 'https://github.com/sundbp/ffi-rzmq.git'
 
 group :development, :test do
-  gem 'rake',       '~> 0.8.7'
+  gem 'rake',       '~> 0.9.2'
   gem 'ore-tasks',  '~> 0.4'
   gem 'rspec',      '~> 2.4'
   gem 'kramdown'

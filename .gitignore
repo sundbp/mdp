@@ -6,3 +6,4 @@ vendor/cache/*.gem
 bin/
 .redcar/
 .bundle/
+.yardoc/
