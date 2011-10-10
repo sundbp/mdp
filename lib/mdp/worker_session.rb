@@ -1,5 +1,4 @@
 require 'ffi-rzmq'
-require 'my-ffi-rzmq/string_multipart_message' # until merged into gem
 require 'mdp'
 
 module MDP

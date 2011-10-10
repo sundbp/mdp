@@ -4,7 +4,7 @@ source :rubygems
 
 gemspec
 
-gem 'ffi-rzmq', '~> 0.9.0'
+gem 'ffi-rzmq', :path => "~/dev/_mine/ffi-rzmq"
 #gem 'ffi-rzmq', :git => 'https://github.com/sundbp/ffi-rzmq.git'
 
 group :development, :test do
