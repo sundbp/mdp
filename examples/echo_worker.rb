@@ -6,7 +6,7 @@ require 'mdp'
 class EchoWorker
   
   def initialize(broker_endpoint = 'tcp://127.0.0.1:5555')
-    @session = MDP::WorkerSession.new("echo", :broker_endpoint => broker_endpoint)
+    @session = MDP::WorkerSession.new("echo", broker_endpoint)
   end
   
   def run

@@ -5,11 +5,11 @@ require 'mdp'
 
 session = MDP::ClientSession.new
 
-num_msgs = 100_000
+num_msgs = 1000
 
 t1 = Time.now
 num_msgs.times do |index|
-  request = MultipartStringMessage.new
+  request = ZMQ::StringMultipartMessage.new
   the_message = "hello world #{index}"
   request.push the_message
   reply = session.send("echo", request)

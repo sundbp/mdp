@@ -355,7 +355,7 @@ module MDP
     end
   
     def send(command, input_msg = nil)
-      msg = input_msg.nil? ? ZMQ::MultipartStringMessage.new : input_msg.duplicate
+      msg = input_msg.nil? ? ZMQ::StringMultipartMessage.new : input_msg.duplicate
   
       msg.push command
       msg.push MDP::MDPW_WORKER
