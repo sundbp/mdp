@@ -4,7 +4,7 @@ source :rubygems
 
 gemspec
 
-gem 'ffi-rzmq', :path => "~/dev/_mine/ffi-rzmq"
+gem 'ffi-rzmq', :path => "c:/ruby-dev-env/userhome/dev-area/ffi-rzmq"
 #gem 'ffi-rzmq', :git => 'https://github.com/sundbp/ffi-rzmq.git'
 
 group :development, :test do
@@ -21,7 +21,7 @@ group :development do
   gem 'guard',        '~> 0.3.0'
   gem 'guard-rspec',  '~> 0.2.0'
   
-  if RbConfig::CONFIG['host_os'] == 'windows'
+  if RbConfig::CONFIG['host_os'] == 'mswin32'
     gem 'rb-notifu'
     gem 'rb-fchange'
   end

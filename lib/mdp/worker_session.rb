@@ -15,7 +15,7 @@ module MDP
   # @example
   #   class EchoWorker
   #     def initialize(broker_endpoint = 'tcp://127.0.0.1:5555')
-  #       @session = MDP::WorkerSession.new("echo", :broker_endpoint => broker_endpoint)
+  #       @session = MDP::WorkerSession.new("echo", broker_endpoint)
   #     end
   #   
   #     def run
@@ -61,6 +61,8 @@ module MDP
     # @option options [Fixnum] :hearbeat_interval the hearbeat intervall given in milliseconds
     # @option options [Fixnum] :hearbeat_liveness how many hearbeats can fail before we reconnect
     # @option options [Fixnum] :reconnect_interval how long to wait before reconnecting
+    # @option options [ZMQ::Context] :context if given this context is used, otherwise a new context
+    #   is crated for the session
     #
     # @raise [MDPError] raises error in case a 0mq context cant not be created or a socket can't be created.
     def initialize(service_name, 
@@ -69,7 +71,13 @@ module MDP
       @service_name = service_name
       @broker_endpoint = broker_endpoint
       @options = DEFAULTS.merge(options)
-      @context = ZMQ::Context.create(1)
+      @context = if options.has_key? :context
+        @owner_of_context = false
+        options[:context]
+      else
+        @owner_of_context = true
+        ZMQ::Context.create(1)
+      end
       raise MDPError.new("Failed to create ZeroMQ context!") if @context.nil?
     end
   
@@ -217,7 +225,9 @@ module MDP
     # This closes any open socket and terminates the 0mq context.
     def shutdown
       @worker.close unless @worker.nil?
-      @context.terminate unless @context.nil?
+      if @owner_of_context
+        @context.terminate unless @context.nil?
+      end
     end
 
     #################### PRIVATE METHODS ##########################
