@@ -7,16 +7,29 @@ module MDP
     
     DEFAULTS = {
       :verbose => true,
-      :endpoint => 'tcp://*:5555',
       :heartbeat_interval => 2500, # in milliseconds
       :heartbeat_liveness => 3,
     }
     
     attr_reader :socket
   
-    def initialize(options = {})
+    def initialize(endpoint = 'tcp://*:5555', options = {})
+      @endpoint = endpoint
       @options = DEFAULTS.merge(options)
-      @context = ZMQ::Context.new(1)
+      @logger = if @options.has_key? :logger
+        @options[:logger]
+      else
+        Logger.new(STDOUT)
+      end        
+
+      @context = if @options.has_key? :context
+        @owner_of_context = false
+        @options[:context]
+      else
+        @owner_of_context = true
+        ZMQ::Context.create(1)
+      end
+      raise MDPError.new("Failed to create ZeroMQ context!") if @context.nil?
       @socket = @context.socket(ZMQ::ROUTER)
       
       @services = Hash.new
@@ -25,9 +38,9 @@ module MDP
     end
     
     def run
-      log "Starting up broker.."
+      @logger.info "Starting up broker on endpoint #{@endpoint}"
     
-      @socket.bind(@options[:endpoint])
+      @socket.bind(@endpoint)
       
       poller = ZMQ::Poller.new
       poller.register_readable(@socket)

@@ -63,6 +63,8 @@ module MDP
     # @option options [Fixnum] :reconnect_interval how long to wait before reconnecting
     # @option options [ZMQ::Context] :context if given this context is used, otherwise a new context
     #   is crated for the session
+    # @option options [Logger] :logger if given this logger is used, otherwise a new logger
+    #   is crated for the session
     #
     # @raise [MDPError] raises error in case a 0mq context cant not be created or a socket can't be created.
     def initialize(service_name, 
@@ -71,9 +73,16 @@ module MDP
       @service_name = service_name
       @broker_endpoint = broker_endpoint
       @options = DEFAULTS.merge(options)
-      @context = if options.has_key? :context
+      
+      @logger = if @options.has_key? :logger
+        @options[:logger]
+      else
+        Logger.new(STDOUT)
+      end        
+
+      @context = if @options.has_key? :context
         @owner_of_context = false
-        options[:context]
+        @options[:context]
       else
         @owner_of_context = true
         ZMQ::Context.create(1)
@@ -88,6 +97,8 @@ module MDP
     #
     # Resets when the next heartbeat is to take place.
     # @return self
+    #
+    # @raise [MDPError] raises error in case we have unrecoverable 0mq problems.
     def connect_to_broker
       @worker.close unless @worker.nil?
       @worker = @context.socket(ZMQ::DEALER)
@@ -115,7 +126,10 @@ module MDP
     #   end
     #
     # @param reply any reply to send back to the broker/client
-    # @return the next request received from the broker/client to handle 
+    # @return the next request received from the broker/client to handle.
+    #   returns nil on failure.
+    #
+    # @raise [MDPError] raises error in case we have unrecoverable 0mq problems.
     def recv(reply = nil)
       connect_to_broker() if @worker.nil?
       
@@ -138,15 +152,15 @@ module MDP
         if results == -1
           case errno
           when ZMQ::EINTR
-            log "Interrupted while in poll. Shutting down.."
+            @logger.fatal "Interrupted while in poll. Shutting down.."
           when ZMQ::EFAULT
-            raise MDPError.new("Invalid poll items!")
+            @logger.fatal "Invalid poll items."
           when ZMQ::ETERM
-            raise MDPError.new("A socket with terminated context detected!")
+            @logger.fatal "A socket with terminated context detected."
           else
-            raise MDPError.new("zmq_poll() failed for unknown reason!")
+            @logger.fatal "zmq_poll() failed for unknown reason."
           end
-          return nil
+          raise MDPError.new("Unrecoverable 0mq error when polling for request")
         end
         
         if results == 1
@@ -155,7 +169,7 @@ module MDP
           rc = socket.recv_strings(msg)
           
           unless ZMQ::Util.resultcode_ok?(rc)
-            log "zmq_recv() failed, going to skip this and see what happens.."
+            @logger.error "zmq_recv() failed, going to skip this msg and see what happens.."
             process_heartbeat()
             next
           end
@@ -164,7 +178,7 @@ module MDP
           
           # is it a valid message? if not just skip it
           if msg.size < 2
-            log "Message too short (<2 frames), skipping it:\n#{msg}"
+            @logger.error "Message too short (<2 frames), skipping it:\n#{msg}"
             next
           end
           
@@ -175,7 +189,7 @@ module MDP
           
           # is this a valid message? if not just skip it
           if header != MDP::MDPW_WORKER
-            log "Received an invalid message - header not valid: #{header}\n#{msg}"
+            @logger.error "Received an invalid message - header not valid: #{header}\n#{msg}"
             next
           end        
           
@@ -193,19 +207,20 @@ module MDP
             reconnect(poller)
             
           else
-            log "Invalid input message received: #{command}\n#{msg}"
+            @logger.error "Invalid input message received: #{command}\n#{msg}"
           end
         
         elsif results == 0
           @liveness -= 1
           if @liveness == 0
             sleep(@options[:reconnect_interval].to_f / 1000.0)
-            log "Disconnected from broker - retrying.." 
+            @logger.warn "Disconnected from broker - retrying.." 
             reconnect(poller)
           end
           
         elsif results > 1
-          raise MDPError.new("Somehow got more than 1 result from poll when listening to 1 socket - bailing!")
+          @logger.fatal "Somehow got more than 1 result from poll when listening to 1 socket - bailing!"
+          raise MDPError.new("Very confused, getting more results from poll than I'm looking for")
         end
         
         process_heartbeat()
@@ -233,10 +248,6 @@ module MDP
     #################### PRIVATE METHODS ##########################
     
     private
-    
-    def log(msg)
-      puts "#{Time.now} - #{msg}" if @options[:verbose]
-    end
 
     # Reconnect the worker session to the broker
     #
@@ -282,6 +293,8 @@ module MDP
     # @param [String] option an optional string to tack on after the command
     # @param [StringMultipartMessage] the message to send, if not given only the command (and possible option) are sent
     # @return [Fixnum] the return code from 0mq
+    #
+    # @raise [MDPError] raises error in case we have unrecoverable 0mq problems.
     def send(command, option = nil, input_msg = nil)
       msg = input_msg.nil? ? ZMQ::StringMultipartMessage.new : input_msg.duplicate
       msg.push option unless option.nil?

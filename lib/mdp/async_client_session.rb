@@ -13,7 +13,20 @@ module MDP
     def initialize(broker_endpoint = 'tcp://127.0.0.1:5555', options = {})
       @broker_endpoint = broker_endpoint
       @options = DEFAULTS.merge(options)
-      @context = ZMQ::Context.new(1)
+      @logger = if @options.has_key? :logger
+        @options[:logger]
+      else
+        Logger.new(STDOUT)
+      end        
+
+      @context = if @options.has_key? :context
+        @owner_of_context = false
+        @options[:context]
+      else
+        @owner_of_context = true
+        ZMQ::Context.create(1)
+      end
+      raise MDPError.new("Failed to create ZeroMQ context!") if @context.nil?
       connect_to_broker()
     end
   
@@ -24,7 +37,7 @@ module MDP
       @client.connect(@broker_endpoint)
     end
   
-    def send(service, request = nil)
+    def send(service, request)
       request.push service
       request.push MDP::MDPC_CLIENT
       request.push ""
@@ -40,15 +53,15 @@ module MDP
       if results == -1
         case errno
         when ZMQ::EINTR
-          log "Interrupted while in poll. Shutting down.."
+          @logger.fatal "Interrupted while in poll. Shutting down.."
         when ZMQ::EFAULT
-          log "Invalid poll items! Shutting down.."
+          @logger.fatal "Invalid poll items! Shutting down.."
         when ZMQ::ETERM
-          log "A socket with terminated context detected! Shutting down.."
+          @logger.fatal "A socket with terminated context detected! Shutting down.."
         else
-          log "zmq_poll() failed for unknown reason! Shutting down.."
+          @logger.fatal "zmq_poll() failed for unknown reason! Shutting down.."
         end
-        return nil
+        raise MDPError.new("Unrecoverable 0mq error when polling for replies")
       end
       
       if results == 1
@@ -56,14 +69,24 @@ module MDP
         reply = ZMQ::StringMultipartMessage.new
         rc = socket.recv_strings(reply)
         if rc == -1
-          log "zmq_recv() failed, baling out.."
-          return nil
+          case errno
+          when ZMQ::EINTR
+            @logger.fatal "Interrupted while in poll. Shutting down.."
+          when ZMQ::EFAULT
+            @logger.fatal "Invalid poll items! Shutting down.."
+          when ZMQ::ETERM
+            @logger.fatal "A socket with terminated context detected! Shutting down.."
+          else
+            @logger.fatal "zmq_poll() failed for unknown reason! Shutting down.."
+          end
+          raise MDPError.new("Unrecoverable 0mq error when receiving reply")
         end
         
         #log "Received message from broker:\n#{reply}"
         
         if reply.size < 3
-          log "Invalid reply received (<3 parts), bailing out.."
+          @logger.fatal "Invalid reply received (<3 parts)."
+          return nil
         end
         
         # empty frame
@@ -71,7 +94,7 @@ module MDP
         
         header = reply.pop
         if header != MDP::MDPC_CLIENT
-          log "Got a bad header, bailing out.."
+          @logger.fatal "Received invalid header, bailing out.."
           return nil
         end
         
@@ -81,8 +104,8 @@ module MDP
         return reply
       
       elsif results > 1
-        log "Somehow got more than 1 result from poll when listening to 1 socket - bailing!"
-        return nil      
+        @logger.fatal "Somehow got more than 1 result from poll when listening to 1 socket - bailing!"
+        raise MDPError.new("Very confused, getting more results from poll than I'm looking for")
       end
       
       nil    
@@ -98,7 +121,9 @@ module MDP
     
     def shutdown
       @client.close unless @client.nil?
-      @context.terminate
+      if @owner_of_context
+        @context.terminate unless @context.nil?
+      end
     end
   end
 end
