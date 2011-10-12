@@ -54,6 +54,8 @@ module MDP
       
       @run = true
       
+      @logger.info "About to start loop in #run"
+      
       while @run do
         # num_workers = 0
         # @services.each do |name, svc|
