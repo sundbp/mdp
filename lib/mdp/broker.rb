@@ -39,6 +39,7 @@ module MDP
     
     def stop
       @run = false
+      @logger.info "Service signalled to stop - #run will exit on next heartbeat."
     end
     
     def run
@@ -120,7 +121,9 @@ module MDP
         process_heartbeat()
       end
       
+      @logger.info "Told to stop in #run, shutting down.."
       shutdown()
+      @logger.info "#run exiting"
     end
     
     def process_heartbeat
