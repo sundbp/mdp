@@ -1,6 +1,6 @@
 name: mdp
-summary: "TODO: Summary"
-description: "TODO: Description"
+summary: "MajorDomoProtocol implementation"
+description: "A ruby implementation of the MDP as described in the 0mq guide."
 license: MIT
 authors: pts
 homepage: http://rubygems.org/gems/mdp
