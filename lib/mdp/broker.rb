@@ -52,7 +52,7 @@ module MDP
       
       @next_heartbeat = next_heartbeat
       
-      @run= true
+      @run = true
       
       while @run do
         # num_workers = 0
