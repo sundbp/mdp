@@ -54,8 +54,6 @@ module MDP
       
       @run = true
       
-      @logger.info "About to start loop in #run"
-      
       while @run do
         # num_workers = 0
         # @services.each do |name, svc|
@@ -71,8 +69,6 @@ module MDP
   
         results = poller.poll(heartbeat_interval)
           
-        @logger.info "#poll returned with result #{results}"
-        
         if results == -1
           case errno
           when ZMQ::EINTR
@@ -125,9 +121,9 @@ module MDP
         process_heartbeat()
       end
       
-      @logger.info "Told to stop in #run, shutting down.."
+      @logger.info "Told to stop in #run, shutting down 0mq things.."
       shutdown()
-      @logger.info "#run exiting"
+      @logger.info "MDP::Broker#run exiting"
     end
     
     def process_heartbeat
