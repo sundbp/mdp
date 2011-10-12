@@ -5,6 +5,9 @@ license: MIT
 authors: pts
 homepage: http://rubygems.org/gems/mdp
 
+dependencies:
+  ffi-rzmq: ~> 0.9.0
+  
 development_dependencies:
   yard: ~> 0.7
   bundler: ~> 1.0.0
