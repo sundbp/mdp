@@ -68,7 +68,9 @@ module MDP
         # end
   
         results = poller.poll(heartbeat_interval)
-    
+          
+        @logger.info "#poll returned with result #{results}"
+        
         if results == -1
           case errno
           when ZMQ::EINTR
