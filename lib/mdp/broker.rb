@@ -37,6 +37,10 @@ module MDP
       @waiting = []
     end
     
+    def stop
+      @run = false
+    end
+    
     def run
       @logger.info "Starting up broker on endpoint #{@endpoint}"
     
@@ -47,7 +51,9 @@ module MDP
       
       @next_heartbeat = next_heartbeat
       
-      loop do
+      @run= true
+      
+      while @run do
         # num_workers = 0
         # @services.each do |name, svc|
         #   puts "service name: #{svc.name}\n"
