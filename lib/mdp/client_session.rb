@@ -1,5 +1,7 @@
 require 'logger'
 require 'ffi-rzmq'
+require 'ffi-rzmq/multipart'
+
 require 'mdp'
 
 module MDP
