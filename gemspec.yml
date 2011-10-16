@@ -2,7 +2,7 @@ name: mdp
 summary: "MajorDomoProtocol implementation"
 description: "A ruby implementation of the MDP as described in the 0mq guide."
 license: MIT
-authors: pts
+authors: Patrik Sundberg
 homepage: http://rubygems.org/gems/mdp
 
 dependencies:
