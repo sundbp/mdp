@@ -6,9 +6,9 @@ require 'mdp'
 module MDP
   
   # Represents a worker session.
-  # 
+  #
   # A worker in MDP is something responding to requests for a given service.
-  # A worker registers with a broker and will then be forwarded client requests. 
+  # A worker registers with a broker and will then be forwarded client requests.
   # Many workers for the same service can be running to handle more requests.
   # The broker will ensure the client requests are shared among the workers in
   # a sensible way.
@@ -19,7 +19,7 @@ module MDP
   #     def initialize(broker_endpoint = 'tcp://127.0.0.1:5555')
   #       @session = MDP::WorkerSession.new("echo", broker_endpoint)
   #     end
-  #   
+  #
   #     def run
   #       reply = nil
   #       loop do
@@ -69,7 +69,7 @@ module MDP
     #   is crated for the session
     #
     # @raise [MDPError] raises error in case a 0mq context cant not be created or a socket can't be created.
-    def initialize(service_name, 
+    def initialize(service_name,
                    broker_endpoint = 'tcp://127.0.0.1:5555',
                    options = {})
       @service_name = service_name
@@ -93,7 +93,7 @@ module MDP
     end
   
     # Connect the worker session to the broker
-    # 
+    #
     # This will close an already open socket, and create a new socket it connects
     # to the broker endpoint.
     #
@@ -115,6 +115,11 @@ module MDP
       self
     end
 
+    def stop
+      @run = false
+      @logger.info "MDP::WorkerSession signalled to stop - #run will exit on next hearbeat."
+    end
+    
     # Receive a client request (and deliver any existing reply)
     #
     # This method tends to be used in a loop like this:
@@ -148,7 +153,9 @@ module MDP
       poller = ZMQ::Poller.new
       poller.register_readable(@worker)
   
-      loop do
+      @run = true
+      
+      while @run do
         results = poller.poll(heartbeat_interval)
       
         if results == -1
@@ -193,7 +200,7 @@ module MDP
           if header != MDP::MDPW_WORKER
             @logger.error "Received an invalid message - header not valid: #{header}\n#{msg}"
             next
-          end        
+          end
           
           command = msg.pop
           
@@ -216,7 +223,7 @@ module MDP
           @liveness -= 1
           if @liveness == 0
             sleep(@options[:reconnect_interval].to_f / 1000.0)
-            @logger.warn "Disconnected from broker - retrying.." 
+            @logger.warn "Disconnected from broker - retrying.."
             reconnect(poller)
           end
           
@@ -228,6 +235,9 @@ module MDP
         process_heartbeat()
       end
       
+      @logger.info "MDP::WorkerSession told to stop in #run, shutting down 0mq things.."
+      shutdown()
+      @logger.info "MDP::WorkerSession#run exiting"
     end
 
     # Utility method to fetch the hearbeat interval from our options
@@ -316,14 +326,14 @@ module MDP
       Time.now + heartbeat_interval.to_f / 1000.0
     end
   
-    # Utility method to access 0mq errno 
+    # Utility method to access 0mq errno
     def errno
       ZMQ::Util.errno
     end
     
     # Handle heartbeating
     #
-    # Will send a hearbeat and figure out next time to send one if it's 
+    # Will send a hearbeat and figure out next time to send one if it's
     # time for a heartbeat, otherwise does nothing.
     def process_heartbeat
       if Time.now > @next_heartbeat
